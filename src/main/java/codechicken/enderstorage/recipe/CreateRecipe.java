@@ -41,11 +41,11 @@ public class CreateRecipe extends ShapedRecipe {
             }
         }
         Frequency frequency = new Frequency(colour, colour, colour);
-        return frequency.writeToStack(super.assemble(inv, registries));
+        return frequency.putComponent(super.assemble(inv, registries));
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<? extends ShapedRecipe> getSerializer() {
         return EnderStorageModContent.CREATE_RECIPE_SERIALIZER.get();
     }
 

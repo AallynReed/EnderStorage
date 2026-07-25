@@ -1,7 +1,7 @@
 {
   "variants": {
     "": {
-      "model": "enderstorage:block/dummy"
+      "model": "enderstorage:block/ender_tank"
     }
   }
 }

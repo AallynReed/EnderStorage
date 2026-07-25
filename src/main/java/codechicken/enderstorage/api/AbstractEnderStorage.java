@@ -1,8 +1,8 @@
 package codechicken.enderstorage.api;
 
 import codechicken.enderstorage.manager.EnderStorageManager;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 public abstract class AbstractEnderStorage {
 
@@ -36,11 +36,9 @@ public abstract class AbstractEnderStorage {
         return changeCount;
     }
 
-    public abstract void clearStorage();
-
     public abstract String type();
 
-    public abstract CompoundTag saveToTag(HolderLookup.Provider registries);
+    public abstract void saveToTag(ValueOutput output);
 
-    public abstract void loadFromTag(CompoundTag tag, HolderLookup.Provider registries);
+    public abstract void loadFromTag(ValueInput input);
 }

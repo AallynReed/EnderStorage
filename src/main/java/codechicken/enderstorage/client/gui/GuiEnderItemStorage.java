@@ -3,8 +3,9 @@ package codechicken.enderstorage.client.gui;
 import codechicken.enderstorage.container.ContainerEnderItemStorage;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 public class GuiEnderItemStorage extends AbstractContainerScreen<ContainerEnderItemStorage> {
@@ -26,27 +27,27 @@ public class GuiEnderItemStorage extends AbstractContainerScreen<ContainerEnderI
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title.getVisualOrderText(), 8, 6, 0x404040, false);
-        graphics.drawString(font, playerInventoryTitle.getVisualOrderText(), 8, imageHeight - 94, 0x404040, false);
+        graphics.drawString(font, title.getVisualOrderText(), 8, 6, 0xFF404040, false);
+        graphics.drawString(font, playerInventoryTitle.getVisualOrderText(), 8, imageHeight - 94, 0xFF404040, false);
         menu.chestInv.freq.ownerName().ifPresent(name -> {
-            graphics.drawString(font, name.getVisualOrderText(), 170 - font.width(name), 6, 0x404040, false);
+            graphics.drawString(font, name.getVisualOrderText(), 170 - font.width(name), 6, 0xFF404040, false);
         });
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
-        ResourceLocation texture = ResourceLocation.withDefaultNamespace(menu.chestInv.getSize() == 0 ? "textures/gui/container/dispenser.png" : "textures/gui/container/generic_54.png");
+        Identifier texture = Identifier.withDefaultNamespace(menu.chestInv.getSize() == 0 ? "textures/gui/container/dispenser.png" : "textures/gui/container/generic_54.png");
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
 
         switch (menu.chestInv.getSize()) {
             case 0:
             case 2:
-                graphics.blit(texture, x, y, 0, 0, imageWidth, imageHeight);
+                graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0f, 0f, imageWidth, imageHeight, 256, 256);
                 break;
             case 1:
-                graphics.blit(texture, x, y, 0, 0, imageWidth, 71);
-                graphics.blit(texture, x, y + 71, 0, 126, imageWidth, 96);
+                graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, imageWidth, 71, 256, 256);
+                graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y + 71, 0, 126, imageWidth, 96, 256, 256);
                 break;
 
         }

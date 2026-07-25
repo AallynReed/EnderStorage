@@ -4,32 +4,48 @@ import codechicken.enderstorage.api.Frequency;
 import codechicken.enderstorage.block.BlockEnderTank;
 import codechicken.enderstorage.client.model.ButtonModelLibrary;
 import codechicken.enderstorage.client.render.RenderCustomEndPortal;
+import codechicken.enderstorage.init.EnderStorageModContent;
 import codechicken.enderstorage.tile.TileEnderTank;
 import codechicken.lib.colour.EnumColour;
 import codechicken.lib.fluid.FluidUtils;
 import codechicken.lib.math.MathHelper;
-import codechicken.lib.render.*;
+import codechicken.lib.render.CCModel;
+import codechicken.lib.render.CCModelLibrary;
+import codechicken.lib.render.CCRenderState;
+import codechicken.lib.render.RenderUtils;
+import codechicken.lib.render.buffer.ExtentsConsumer;
 import codechicken.lib.render.model.OBJParser;
 import codechicken.lib.util.ClientUtils;
 import codechicken.lib.vec.*;
 import codechicken.lib.vec.uv.UVTranslation;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3fc;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static codechicken.enderstorage.EnderStorage.MOD_ID;
 
-public class RenderTileEnderTank implements BlockEntityRenderer<TileEnderTank> {
+public class RenderTileEnderTank implements BlockEntityRenderer<TileEnderTank, RenderTileEnderTank.RenderState> {
 
-    private static final RenderType baseType = RenderType.entityCutout(ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/endertank.png"));
-    private static final RenderType buttonType = RenderType.entitySolid(ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/buttons.png"));
-    private static final RenderType pearlType = CCModelLibrary.getIcos4RenderType(ResourceLocation.fromNamespaceAndPath(MOD_ID, "textures/hedronmap.png"));
+    private static final RenderType baseType = RenderTypes.entityCutout(Identifier.fromNamespaceAndPath(MOD_ID, "textures/endertank.png"));
+    private static final RenderType buttonType = RenderTypes.entitySolid(Identifier.fromNamespaceAndPath(MOD_ID, "textures/buttons.png"));
+    private static final RenderType pearlType = CCModelLibrary.getIcos7RenderType(Identifier.fromNamespaceAndPath(MOD_ID, "textures/hedronmap.png"));
 
     public static final CCModel tankModel;
     public static final CCModel valveModel;
@@ -37,7 +53,7 @@ public class RenderTileEnderTank implements BlockEntityRenderer<TileEnderTank> {
     public static final RenderCustomEndPortal renderEndPortal = new RenderCustomEndPortal(0.1205, 0.24, 0.76, 0.24, 0.76);
 
     static {
-        Map<String, CCModel> models = new OBJParser(ResourceLocation.fromNamespaceAndPath(MOD_ID, "models/endertank.obj"))
+        Map<String, CCModel> models = new OBJParser(Identifier.fromNamespaceAndPath(MOD_ID, "models/endertank.obj"))
                 .quads()
                 .swapYZ()
                 .parse();
@@ -54,45 +70,103 @@ public class RenderTileEnderTank implements BlockEntityRenderer<TileEnderTank> {
     public RenderTileEnderTank(BlockEntityRendererProvider.Context context) {
     }
 
-    @Override
-    public void render(TileEnderTank enderTank, float partialTicks, PoseStack mStack, MultiBufferSource source, int packedLight, int packedOverlay) {
-        CCRenderState ccrs = CCRenderState.instance();
-        ccrs.brightness = packedLight;
-        ccrs.overlay = packedOverlay;
-        float valveRot = (float) MathHelper.interpolate(enderTank.pressure_state.b_rotate, enderTank.pressure_state.a_rotate, partialTicks) * 0.01745F;
-        int pearlOffset = RenderUtils.getTimeOffset(enderTank.getBlockPos());
-        Matrix4 mat = new Matrix4(mStack);
-        renderTank(ccrs, mat.copy(), source, enderTank.rotation, valveRot, enderTank.getFrequency(), pearlOffset);
-        renderFluid(ccrs, mat, source, enderTank.liquid_state.c_liquid);
-        ccrs.reset();
-    }
-
-    public static void renderTank(CCRenderState ccrs, Matrix4 mat, MultiBufferSource buffers, int rotation, float valveRot, Frequency freq, int pearlOffset) {
-        renderEndPortal.render(mat, buffers);
+    public static void getExtents(Consumer<Vector3fc> output) {
+        Matrix4 mat = new Matrix4();
+        var ccrs = CCRenderState.instance();
         ccrs.reset();
         mat.translate(0.5, 0, 0.5);
-        mat.rotate((-90 * (rotation + 2)) * MathHelper.torad, Vector3.Y_POS);
-        ccrs.bind(baseType, buffers);
+        ccrs.bind(new ExtentsConsumer(output), DefaultVertexFormat.POSITION);
         tankModel.render(ccrs, mat);
-        Matrix4 valveMat = mat.copy().apply(new Rotation(valveRot, Vector3.Z_POS).at(new Vector3(0, 0.4165, 0)));
-        valveModel.render(ccrs, valveMat, new UVTranslation(0, freq.hasOwner() ? 13 / 64D : 0));
-
-        ccrs.bind(buttonType, buffers);
-        EnumColour[] colours = freq.toArray();
+        valveModel.render(ccrs, mat);
         for (int i = 0; i < 3; i++) {
-            //noinspection IntegerDivisionInFloatingPointContext
-            buttons[i].render(ccrs, mat, new UVTranslation(0.25 * (colours[i].getWoolMeta() % 4), 0.25 * (colours[i].getWoolMeta() / 4)));
+            buttons[i].render(ccrs, mat);
         }
-
-        double time = ClientUtils.getRenderTime() + pearlOffset;
-        Matrix4 pearlMat = RenderUtils.getMatrix(mat.copy(), new Vector3(0, 0.45 + RenderUtils.getPearlBob(time) * 2, 0), new Rotation(time / 3, Vector3.Y_POS), 0.04);
-        ccrs.brightness = 15728880;
-        ccrs.bind(pearlType, buffers);
-        CCModelLibrary.icosahedron4.render(ccrs, pearlMat);
-        ccrs.reset();
     }
 
-    public static void renderFluid(CCRenderState ccrs, Matrix4 mat, MultiBufferSource getter, FluidStack stack) {
-        RenderUtils.renderFluidCuboid(ccrs, mat, RenderUtils.getFluidRenderType(), getter, stack, new Cuboid6(0.22, 0.12, 0.22, 0.78, 0.121 + 0.63, 0.78), stack.getAmount() / (16D * FluidUtils.B), 0.75);
+    @Override
+    public RenderState createRenderState() {
+        return new RenderState();
+    }
+
+    @Override
+    public void extractRenderState(TileEnderTank tile, RenderState state, float partialTick, Vec3 camera, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(tile, state, partialTick, camera, breakProgress);
+
+        state.rotation = EnderStorageModContent.ENDER_CHEST_BLOCK.get()
+                .rotation
+                .get(tile.getBlockState());
+        state.frequency = tile.getFrequency();
+        state.valveRotation = (float) MathHelper.interpolate(tile.pressure_state.b_rotate, tile.pressure_state.a_rotate, partialTick) * 0.01745F;
+        state.pearlOffset = RenderUtils.getTimeOffset(tile.getBlockPos());
+        state.fluid = tile.getTankState().c_liquid.copy();
+    }
+
+    @Override
+    public void submit(RenderState state, PoseStack pose, SubmitNodeCollector collector, CameraRenderState camera) {
+        doSubmit(state, pose, collector, camera);
+    }
+
+    public static void doSubmit(RenderState state, PoseStack pose, SubmitNodeCollector collector, @Nullable CameraRenderState camera) {
+        if (camera != null) {
+            renderEndPortal.submit(pose, state.blockPos, collector, camera);
+        }
+        Matrix4 mat = new Matrix4(pose);
+        mat.translate(0.5, 0, 0.5);
+        mat.rotate((-state.rotation.toYRot() + 180F) * MathHelper.torad, Vector3.Y_POS);
+
+        collector.cc$submitCCRS(mat, baseType, (baseMat, ccrs) -> {
+            ccrs.brightness = state.lightCoords;
+            ccrs.overlay = state.overlayCoords;
+
+            tankModel.render(ccrs, mat);
+            Matrix4 valveMat = mat.copy().apply(new Rotation(state.valveRotation, Vector3.Z_POS).at(new Vector3(0, 0.4165, 0)));
+            valveModel.render(ccrs, valveMat, new UVTranslation(0, state.frequency.hasOwner() ? 13 / 64D : 0));
+        });
+
+        collector.cc$submitCCRS(mat, buttonType, (buttonMat, ccrs) -> {
+            ccrs.brightness = state.lightCoords;
+            ccrs.overlay = state.overlayCoords;
+
+            EnumColour[] colours = state.frequency.toArray();
+            for (int i = 0; i < 3; i++) {
+                //noinspection IntegerDivisionInFloatingPointContext
+                buttons[i].render(ccrs, mat, new UVTranslation(0.25 * (colours[i].getWoolMeta() % 4), 0.25 * (colours[i].getWoolMeta() / 4)));
+            }
+        });
+
+        collector.cc$submitCCRS(mat, pearlType, (pearlMat, ccrs) -> {
+            ccrs.brightness = 15728880;
+            ccrs.overlay = state.overlayCoords;
+
+            double time = ClientUtils.getRenderTime() + state.pearlOffset;
+            CCModelLibrary.icosahedron7.render(
+                    ccrs,
+                    RenderUtils.getMatrix(pearlMat, new Vector3(0, 0.45 + RenderUtils.getPearlBob(time) * 2, 0), new Rotation(time / 3, Vector3.Y_POS), 0.04)
+            );
+        });
+
+        if (!state.fluid.isEmpty()) {
+            collector.cc$submitCCRS(pose, RenderTypes.translucentMovingBlock(), (m, ccrs) -> {
+                RenderUtils.renderFluidCuboid(
+                        ccrs,
+                        m,
+                        state.fluid,
+                        new Cuboid6(0.22, 0.12, 0.22, 0.78, 0.121 + 0.63, 0.78),
+                        state.fluid.getAmount() / (16D * FluidUtils.B),
+                        0.75
+                );
+            });
+        }
+    }
+
+    public static class RenderState extends BlockEntityRenderState {
+
+        public Direction rotation = Direction.SOUTH;
+        public Frequency frequency = Frequency.DEFAULT;
+        public float valveRotation;
+        public int pearlOffset;
+        public FluidStack fluid = FluidStack.EMPTY;
+
+        public int overlayCoords = OverlayTexture.NO_OVERLAY;
     }
 }

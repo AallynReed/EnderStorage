@@ -1,25 +1,27 @@
 package codechicken.enderstorage.init;
 
-import codechicken.enderstorage.api.Frequency;
-import codechicken.enderstorage.client.Shaders;
 import codechicken.enderstorage.client.gui.GuiEnderItemStorage;
+import codechicken.enderstorage.client.model.BagFrequencySelectProperty;
+import codechicken.enderstorage.client.model.BagOpenModelCondition;
+import codechicken.enderstorage.client.model.BagOwnedModelCondition;
+import codechicken.enderstorage.client.render.RenderCustomEndPortal;
 import codechicken.enderstorage.client.render.entity.TankLayerRenderer;
+import codechicken.enderstorage.client.render.item.EnderChestItemRender;
+import codechicken.enderstorage.client.render.item.EnderTankItemRender;
 import codechicken.enderstorage.client.render.tile.RenderTileEnderChest;
 import codechicken.enderstorage.client.render.tile.RenderTileEnderTank;
 import codechicken.enderstorage.config.EnderStorageConfig;
-import codechicken.enderstorage.manager.EnderStorageManager;
-import codechicken.enderstorage.storage.EnderItemStorage;
+import codechicken.enderstorage.manager.ClientTankSynchronizer;
+import com.google.common.reflect.TypeToken;
 import net.covers1624.quack.util.CrashLock;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.client.renderer.item.ClampedItemPropertyFunction;
-import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.client.resources.PlayerSkin;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.*;
+import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 
 import static codechicken.enderstorage.EnderStorage.MOD_ID;
 import static codechicken.enderstorage.init.EnderStorageModContent.*;
@@ -35,10 +37,15 @@ public class ClientInit {
         LOCK.lock();
 
         modBus.addListener(ClientInit::onRegisterRenderers);
+        modBus.addListener(ClientInit::onRegisterSpecialModelRenderers);
         modBus.addListener(ClientInit::onAddRenderLayers);
+        modBus.addListener(ClientInit::onRegisterRenderStateModifiers);
         modBus.addListener(ClientInit::onRegisterMenuScreens);
-        modBus.addListener(ClientInit::onClientSetupEvent);
-        Shaders.init(modBus);
+        modBus.addListener(ClientInit::onRegisterSelectModelProperties);
+        modBus.addListener(ClientInit::onRegisterConditionalItemModelProperties);
+
+        RenderCustomEndPortal.init(modBus);
+        ClientTankSynchronizer.init(modBus);
     }
 
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -46,50 +53,37 @@ public class ClientInit {
         BlockEntityRenderers.register(ENDER_TANK_TILE.get(), RenderTileEnderTank::new);
     }
 
-    @SuppressWarnings ({ "rawtypes", "unchecked" })
+    private static void onRegisterSpecialModelRenderers(RegisterSpecialModelRendererEvent event) {
+        event.register(Identifier.fromNamespaceAndPath(MOD_ID, "ender_chest"), EnderChestItemRender.Unbaked.MAP_CODEC);
+        event.register(Identifier.fromNamespaceAndPath(MOD_ID, "ender_tank"), EnderTankItemRender.Unbaked.MAP_CODEC);
+    }
+
     private static void onAddRenderLayers(EntityRenderersEvent.AddLayers event) {
         if (!EnderStorageConfig.disableCreatorVisuals) {
-            for (PlayerSkin.Model skin : event.getSkins()) {
-                var skinRenderer = (LivingEntityRenderer) event.getSkin(skin);
+            for (var skin : event.getSkins()) {
+                var skinRenderer = event.getPlayerRenderer(skin);
                 assert skinRenderer != null;
                 skinRenderer.addLayer(new TankLayerRenderer(skinRenderer));
             }
         }
     }
 
+    private static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
+        event.registerEntityModifier(new TypeToken<EntityRenderer<Entity, EntityRenderState>>() { }, (player, state) -> {
+            state.setRenderData(TankLayerRenderer.PLAYER_UUID, player.getUUID());
+        });
+    }
+
     private static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ENDER_ITEM_STORAGE.get(), GuiEnderItemStorage::new);
     }
 
-    private static void onClientSetupEvent(FMLClientSetupEvent event) {
-        event.enqueueWork(ClientInit::registerPredicates);
+    private static void onRegisterSelectModelProperties(RegisterSelectItemModelPropertyEvent event) {
+        event.register(Identifier.fromNamespaceAndPath(MOD_ID, "bag/frequency"), BagFrequencySelectProperty.TYPE);
     }
 
-    private static void registerPredicates() {
-        ItemProperties.register(
-                ENDER_POUCH.get(),
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "owned"),
-                (ClampedItemPropertyFunction) (pStack, pLevel, pEntity, pSeed) -> Frequency.readFromStack(pStack).hasOwner() ? 1 : 0
-        );
-        ItemProperties.register(
-                ENDER_POUCH.get(),
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "open"),
-                (ClampedItemPropertyFunction) (pStack, pLevel, pEntity, pSeed) -> EnderStorageManager.instance(true).getStorage(Frequency.readFromStack(pStack), EnderItemStorage.TYPE).openCount()
-        );
-        ItemProperties.register(
-                ENDER_POUCH.get(),
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "left"),
-                (pStack, pLevel, pEntity, pSeed) -> Frequency.readFromStack(pStack).left().ordinal()
-        );
-        ItemProperties.register(
-                ENDER_POUCH.get(),
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "middle"),
-                (pStack, pLevel, pEntity, pSeed) -> Frequency.readFromStack(pStack).middle().ordinal()
-        );
-        ItemProperties.register(
-                ENDER_POUCH.get(),
-                ResourceLocation.fromNamespaceAndPath(MOD_ID, "right"),
-                (pStack, pLevel, pEntity, pSeed) -> Frequency.readFromStack(pStack).right().ordinal()
-        );
+    private static void onRegisterConditionalItemModelProperties(RegisterConditionalItemModelPropertyEvent event) {
+        event.register(Identifier.fromNamespaceAndPath(MOD_ID, "bag/open"), BagOpenModelCondition.MAP_CODEC);
+        event.register(Identifier.fromNamespaceAndPath(MOD_ID, "bag/owned"), BagOwnedModelCondition.MAP_CODEC);
     }
 }

@@ -4,6 +4,7 @@ import codechicken.enderstorage.init.EnderStorageModContent;
 import codechicken.enderstorage.misc.EnderKnobSlot;
 import codechicken.enderstorage.tile.TileEnderChest;
 import codechicken.enderstorage.tile.TileFrequencyOwner;
+import codechicken.lib.block.component.DirectionComponent;
 import codechicken.lib.math.MathHelper;
 import codechicken.lib.raytracer.IndexedVoxelShape;
 import codechicken.lib.raytracer.MultiIndexedVoxelShape;
@@ -25,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Created by covers1624 on 29/10/19.
  */
-public class BlockEnderChest extends BlockEnderStorage {
+public class BlockEnderChest extends BlockEnderStorage<TileEnderChest> {
 
     private static final IndexedVoxelShape CHEST = new IndexedVoxelShape(VoxelShapeCache.getShape(new Cuboid6(1 / 16D, 0, 1 / 16D, 15 / 16D, 14 / 16D, 15 / 16D)), 0);
     private static final IndexedVoxelShape[][] BUTTONS = new IndexedVoxelShape[4][3];
@@ -64,7 +65,7 @@ public class BlockEnderChest extends BlockEnderStorage {
     }
 
     public BlockEnderChest(BlockBehaviour.Properties properties) {
-        super(properties);
+        super(properties, EnderStorageModContent.ENDER_CHEST_TILE::get);
     }
 
     @Override
@@ -72,7 +73,7 @@ public class BlockEnderChest extends BlockEnderStorage {
         VoxelShape shape = CHEST;
         BlockEntity t = worldIn.getBlockEntity(pos);
         if (t instanceof TileEnderChest tile) {
-            shape = SHAPES[tile.rotation][tile.getRadianLidAngle(0) >= 0 ? 0 : 1];
+            shape = SHAPES[rotation.get(state).get2DDataValue()][tile.getRadianLidAngle(0) >= 0 ? 0 : 1];
         }
         return shape;
     }
@@ -81,11 +82,5 @@ public class BlockEnderChest extends BlockEnderStorage {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileEnderChest(pos, state);
-    }
-
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level p_153212_, BlockState p_153213_, BlockEntityType<T> p_153214_) {
-        return createTickerHelper(p_153214_, EnderStorageModContent.ENDER_CHEST_TILE.get(), (level, pos, state, tile) -> tile.tick());
     }
 }

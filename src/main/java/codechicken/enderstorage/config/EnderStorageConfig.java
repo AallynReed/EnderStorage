@@ -6,7 +6,7 @@ import codechicken.lib.config.ConfigValue;
 import com.mojang.logging.LogUtils;
 import net.covers1624.quack.util.CrashLock;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -69,7 +69,7 @@ public class EnderStorageConfig {
         requireNonNull(personalItemTag);
 
         if (personalItem == null) {
-            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(personalItemTag.getString()));
+            Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(personalItemTag.getString()));
             if (item == Items.AIR) {
                 LOGGER.error("Invalid personal item in config. Got: '{}. Resetting to default.", personalItemTag.getString());
                 item = Items.DIAMOND;

@@ -36,7 +36,7 @@ public class ReColourRecipe implements CraftingRecipe {
     public ReColourRecipe(String group, ItemStack result) {
         this.group = group;
         this.result = result;
-        ingredient = Ingredient.of(result);
+        ingredient = Ingredient.of(result.getItem());
     }
 
     @Override
@@ -73,9 +73,9 @@ public class ReColourRecipe implements CraftingRecipe {
         EnumColour[] colours = findDyes(inv, chestPos, null);
         if (colours == null) return result.copy(); // This should also not happen...
 
-        return Frequency.readFromStack(chestPos.stack)
+        return Frequency.getComponentOrEmpty(chestPos.stack)
                 .withColours(colours)
-                .writeToStack(result.copy());
+                .putComponent(result.copy());
     }
 
     @Override
@@ -84,23 +84,18 @@ public class ReColourRecipe implements CraftingRecipe {
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<? extends CraftingRecipe> getSerializer() {
         return EnderStorageModContent.RECOLOUR_RECIPE_SERIALIZER.get();
     }
 
     @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return width >= 3 && height >= 3;
+    public PlacementInfo placementInfo() {
+        return PlacementInfo.NOT_PLACEABLE;
     }
 
     @Override
-    public String getGroup() {
+    public String group() {
         return group;
-    }
-
-    @Override
-    public ItemStack getResultItem(HolderLookup.Provider registries) {
-        return result;
     }
 
     @Override

@@ -1,18 +1,10 @@
 {
   "type": "enderstorage:create_recipe",
   "key": {
-    "B": {
-      "item": "minecraft:blaze_powder"
-    },
-    "L": {
-      "tag": "c:leathers"
-    },
-    "P": {
-      "tag": "c:ender_pearls"
-    },
-    "W": {
-      "tag": "c:wools"
-    }
+    "B": "minecraft:blaze_powder",
+    "L": "#c:leathers",
+    "P": "#c:ender_pearls",
+    "W": "#c:wools"
   },
   "pattern": [
     "BLB",

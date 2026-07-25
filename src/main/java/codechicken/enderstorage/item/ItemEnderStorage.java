@@ -5,22 +5,26 @@ import codechicken.enderstorage.tile.TileFrequencyOwner;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.*;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 public class ItemEnderStorage extends BlockItem {
 
-    public ItemEnderStorage(Block block) {
-        super(block, new Properties());
+    public ItemEnderStorage(Block block, Item.Properties properties) {
+        super(block, properties);
     }
 
     public Frequency getFreq(ItemStack stack) {
-        return Frequency.readFromStack(stack);
+        return Frequency.getComponentOrEmpty(stack);
     }
 
     @Override
@@ -36,10 +40,10 @@ public class ItemEnderStorage extends BlockItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext ctx, List<Component> tooltip, TooltipFlag flagIn) {
-        Frequency frequency = Frequency.readFromStack(stack);
-        frequency.ownerName().ifPresent(tooltip::add);
-        tooltip.add(frequency.getTooltip());
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay tooltipDisplay, Consumer<Component> tooltipAdder, TooltipFlag flag) {
+        Frequency frequency = Frequency.getComponentOrEmpty(stack);
+        frequency.ownerName().ifPresent(tooltipAdder);
+        tooltipAdder.accept(frequency.getTooltip());
     }
 
     //    private EnderLiquidStorage getLiquidStorage(ItemStack stack) {

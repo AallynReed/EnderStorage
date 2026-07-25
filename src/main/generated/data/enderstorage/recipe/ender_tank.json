@@ -1,21 +1,11 @@
 {
   "type": "enderstorage:create_recipe",
   "key": {
-    "B": {
-      "item": "minecraft:blaze_rod"
-    },
-    "C": {
-      "item": "minecraft:cauldron"
-    },
-    "O": {
-      "tag": "c:obsidians"
-    },
-    "P": {
-      "tag": "c:ender_pearls"
-    },
-    "W": {
-      "tag": "c:wools"
-    }
+    "B": "minecraft:blaze_rod",
+    "C": "minecraft:cauldron",
+    "O": "#c:obsidians",
+    "P": "#c:ender_pearls",
+    "W": "#c:wools"
   },
   "pattern": [
     "BWB",

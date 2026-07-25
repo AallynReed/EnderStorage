@@ -3,6 +3,9 @@ package codechicken.enderstorage.block;
 import codechicken.enderstorage.api.Frequency;
 import codechicken.enderstorage.config.EnderStorageConfig;
 import codechicken.enderstorage.tile.TileFrequencyOwner;
+import codechicken.lib.block.ModularTileBlock;
+import codechicken.lib.block.component.DirectionComponent;
+import codechicken.lib.block.component.tile.ValueComponent;
 import codechicken.lib.colour.EnumColour;
 import codechicken.lib.raytracer.RayTracer;
 import codechicken.lib.raytracer.SubHitBlockHitResult;
@@ -12,19 +15,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -36,14 +37,27 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Created by covers1624 on 4/11/2016.
  */
-public abstract class BlockEnderStorage extends BaseEntityBlock {
+public abstract class BlockEnderStorage<T extends TileFrequencyOwner> extends ModularTileBlock<T> {
 
-    public BlockEnderStorage(BlockBehaviour.Properties properties) {
-        super(properties);
+    public final DirectionComponent rotation = addComponent(new DirectionComponent(true))
+            .withPlacement(DirectionComponent.PLAYER_HORIZONTAL_OPPOSITE);
+
+    // TODO mayhaps?
+//    public final ValueComponent<Frequency> frequency = addComponent("frequency",
+//            new ValueComponent<>(Frequency.CODEC, Frequency.DEFAULT)
+//                    .syncToClient(Frequency.STREAM_CODEC)
+//    );
+
+    public BlockEnderStorage(BlockBehaviour.Properties properties, Supplier<BlockEntityType<? extends T>> supplier) {
+        super(properties, supplier);
+
+        serverTicks.addTickerFirst((level, pos, state, tile) -> tile.tick());
+        clientTicks.addTickerFirst((level, pos, state, tile) -> tile.tick());
     }
 
     @Override
@@ -52,8 +66,8 @@ public abstract class BlockEnderStorage extends BaseEntityBlock {
     }
 
     @Override
-    public boolean onDestroyedByPlayer(BlockState state, Level world, BlockPos pos, Player player, boolean willHarvest, FluidState fluid) {
-        return willHarvest || super.onDestroyedByPlayer(state, world, pos, player, willHarvest, fluid);
+    public boolean onDestroyedByPlayer(BlockState state, Level world, BlockPos pos, Player player, ItemStack toolStack, boolean willHarvest, FluidState fluid) {
+        return willHarvest || super.onDestroyedByPlayer(state, world, pos, player, toolStack, willHarvest, fluid);
     }
 
     @Override
@@ -76,8 +90,8 @@ public abstract class BlockEnderStorage extends BaseEntityBlock {
     }
 
     @Override
-    public ItemStack getCloneItemStack(BlockState state, HitResult rayTraceResult, LevelReader world, BlockPos pos, Player player) {
-        if (world.getBlockEntity(pos) instanceof TileFrequencyOwner tile) {
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData, Player player) {
+        if (level.getBlockEntity(pos) instanceof TileFrequencyOwner tile) {
             return createItem(tile.getFrequency());
         }
         return ItemStack.EMPTY;
@@ -88,62 +102,58 @@ public abstract class BlockEnderStorage extends BaseEntityBlock {
             freq = freq.withoutOwner();
         }
         ItemStack stack = new ItemStack(this, 1);
-        freq.writeToStack(stack);
+        freq.putComponent(stack);
         return stack;
     }
 
     @Override
-    public ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult clientHit) {
-        if (world.isClientSide) {
-            return ItemInteractionResult.SUCCESS;
-        }
-        BlockEntity tile = world.getBlockEntity(pos);
-        if (!(tile instanceof TileFrequencyOwner owner)) {
-            return ItemInteractionResult.FAIL;
-        }
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult clientHit) {
+        if (world.isClientSide()) return InteractionResult.SUCCESS;
+
+        if (!(world.getBlockEntity(pos) instanceof TileFrequencyOwner tile)) return InteractionResult.FAIL;
 
         //Normal block trace.
         HitResult rawHit = RayTracer.retrace(player);
-        if (!(rawHit instanceof SubHitBlockHitResult hit)) {
-            return ItemInteractionResult.FAIL;
-        }
+        if (!(rawHit instanceof SubHitBlockHitResult hit)) return InteractionResult.FAIL;
+
         if (hit.subHit == 4) {
-            ItemStack item = player.getInventory().getSelected();
-            if (player.isCrouching() && owner.getFrequency().hasOwner()) {
+            ItemStack item = player.getInventory().getSelectedItem();
+            if (player.isCrouching() && tile.getFrequency().hasOwner()) {
                 if (!player.getAbilities().instabuild && !player.getInventory().add(EnderStorageConfig.getPersonalItem().copy())) {
-                    return ItemInteractionResult.FAIL;
+                    return InteractionResult.FAIL;
                 }
 
-                owner.setFreq(owner.getFrequency().withoutOwner());
-                return ItemInteractionResult.SUCCESS;
-            } else if (!item.isEmpty() && ItemUtils.areStacksSameType(item, EnderStorageConfig.getPersonalItem())) {
-                if (!owner.getFrequency().hasOwner()) {
-                    owner.setFreq(owner.getFrequency().withOwner(player));
+                tile.setFreq(tile.getFrequency().withoutOwner());
+                return InteractionResult.SUCCESS;
+            }
+            if (!item.isEmpty() && ItemUtils.areStacksSameType(item, EnderStorageConfig.getPersonalItem())) {
+                if (!tile.getFrequency().hasOwner()) {
+                    tile.setFreq(tile.getFrequency().withOwner(player));
                     if (!player.getAbilities().instabuild) {
                         item.shrink(1);
                     }
-                    return ItemInteractionResult.SUCCESS;
+                    return InteractionResult.SUCCESS;
                 }
             }
         } else if (hit.subHit >= 1 && hit.subHit <= 3) {
-            ItemStack item = player.getInventory().getSelected();
+            ItemStack item = player.getInventory().getSelectedItem();
             if (!item.isEmpty()) {
                 EnumColour dye = EnumColour.fromDyeStack(item);
                 if (dye != null) {
                     EnumColour[] colours = { null, null, null };
                     if (colours[hit.subHit - 1] == dye) {
-                        return ItemInteractionResult.FAIL;
+                        return InteractionResult.FAIL;
                     }
                     colours[hit.subHit - 1] = dye;
-                    owner.setFreq(owner.getFrequency().withColours(colours));
+                    tile.setFreq(tile.getFrequency().withColours(colours));
                     if (!player.getAbilities().instabuild) {
                         item.shrink(1);
                     }
-                    return ItemInteractionResult.FAIL;
+                    return InteractionResult.FAIL;
                 }
             }
         }
-        return !player.isCrouching() && owner.activate(player, hit.subHit, hand) ? ItemInteractionResult.SUCCESS : ItemInteractionResult.FAIL;
+        return !player.isCrouching() && tile.activate(player, hit.subHit, hand) ? InteractionResult.SUCCESS : InteractionResult.FAIL;
     }
 
     @Override
@@ -155,37 +165,25 @@ public abstract class BlockEnderStorage extends BaseEntityBlock {
 
     @Override
     public int getLightEmission(BlockState state, BlockGetter world, BlockPos pos) {
-        BlockEntity tile = world.getBlockEntity(pos);
-        if (tile instanceof TileFrequencyOwner) {
-            return ((TileFrequencyOwner) tile).getLightValue();
+        if (world.getBlockEntity(pos) instanceof TileFrequencyOwner tile) {
+            return tile.getLightValue();
         }
         return 0;
     }
 
     @Override
     public boolean canConnectRedstone(BlockState state, BlockGetter world, BlockPos pos, Direction side) {
-        BlockEntity tile = world.getBlockEntity(pos);
-        return tile instanceof TileFrequencyOwner && ((TileFrequencyOwner) tile).redstoneInteraction();
+        return world.getBlockEntity(pos) instanceof TileFrequencyOwner tile && tile.redstoneInteraction();
     }
 
     @Override
-    public int getAnalogOutputSignal(BlockState state, Level world, BlockPos pos) {
-        BlockEntity tile = world.getBlockEntity(pos);
-        return tile instanceof TileFrequencyOwner ? ((TileFrequencyOwner) tile).comparatorOutput() : 0;
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
+        return level.getBlockEntity(pos) instanceof TileFrequencyOwner tile ? tile.comparatorOutput() : 0;
     }
 
     @Override
     public boolean hasAnalogOutputSignal(BlockState state) {
         return true;
-    }
-
-    @Override
-    public BlockState rotate(BlockState state, LevelAccessor world, BlockPos pos, Rotation direction) {
-        BlockEntity tile = world.getBlockEntity(pos);
-        if (tile instanceof TileFrequencyOwner) {
-            ((TileFrequencyOwner) tile).rotate();
-        }
-        return state;
     }
 
     @Override

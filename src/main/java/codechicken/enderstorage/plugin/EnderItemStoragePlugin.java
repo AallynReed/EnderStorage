@@ -4,7 +4,7 @@ import codechicken.enderstorage.api.EnderStoragePlugin;
 import codechicken.enderstorage.api.Frequency;
 import codechicken.enderstorage.api.StorageType;
 import codechicken.enderstorage.manager.EnderStorageManager;
-import codechicken.enderstorage.network.EnderStorageSPH;
+import codechicken.enderstorage.network.EnderStorageNetwork;
 import codechicken.enderstorage.storage.EnderItemStorage;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -26,7 +26,7 @@ public class EnderItemStoragePlugin implements EnderStoragePlugin<EnderItemStora
     public void sendClientInfo(ServerPlayer player, List<EnderItemStorage> list) {
         for (EnderItemStorage inv : list) {
             if (inv.openCount() > 0) {
-                EnderStorageSPH.sendOpenUpdateTo(player, inv.freq, true);
+                EnderStorageNetwork.sendOpenUpdateTo(player, inv.freq, true);
             }
         }
     }

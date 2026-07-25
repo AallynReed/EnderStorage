@@ -1,6 +1,6 @@
 {
   "item.enderstorage.ender_pouch": "Enderp�se",
-  "block.enderstorage.ender_chest": "Enderkista",
-  "block.enderstorage.ender_tank": "Endertank",
+  "item.enderstorage.ender_chest": "Enderkista",
+  "item.enderstorage.ender_tank": "Endertank",
   "enderstorage.serverop": "Operat�r"
 }

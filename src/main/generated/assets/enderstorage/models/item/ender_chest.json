@@ -1,5 +1,6 @@
 {
-  "parent": "minecraft:item/generated",
-  "class": "codechicken.enderstorage.client.render.item.EnderChestItemRender",
-  "loader": "codechickenlib:class"
+  "parent": "minecraft:item/template_chest",
+  "textures": {
+    "particle": "minecraft:block/obsidian"
+  }
 }

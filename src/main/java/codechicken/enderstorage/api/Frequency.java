@@ -2,13 +2,9 @@ package codechicken.enderstorage.api;
 
 import codechicken.enderstorage.init.EnderStorageModContent;
 import codechicken.lib.colour.EnumColour;
-import codechicken.lib.data.MCDataInput;
-import codechicken.lib.data.MCDataOutput;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -32,6 +28,8 @@ public record Frequency(
         Optional<Component> ownerName
 ) {
 
+    public static final Frequency DEFAULT = new Frequency(EnumColour.WHITE, EnumColour.WHITE, EnumColour.WHITE);
+
     public static final Codec<Frequency> CODEC = RecordCodecBuilder.create(builder -> builder.group(
                     EnumColour.CODEC.fieldOf("left").forGetter(Frequency::left),
                     EnumColour.CODEC.fieldOf("middle").forGetter(Frequency::middle),
@@ -49,23 +47,8 @@ public record Frequency(
             Frequency::new
     );
 
-    public Frequency() {
-        this(EnumColour.WHITE, EnumColour.WHITE, EnumColour.WHITE);
-    }
-
     public Frequency(EnumColour left, EnumColour middle, EnumColour right) {
         this(left, middle, right, Optional.empty(), Optional.empty());
-    }
-
-    @Deprecated
-    public Frequency(CompoundTag tagCompound) {
-        this(
-                EnumColour.fromWoolMeta(tagCompound.getInt("left")),
-                EnumColour.fromWoolMeta(tagCompound.getInt("middle")),
-                EnumColour.fromWoolMeta(tagCompound.getInt("right")),
-                tagCompound.hasUUID("owner") ? Optional.of(tagCompound.getUUID("owner")) : Optional.empty(),
-                tagCompound.contains("owner_name") ? Optional.of(Component.Serializer.fromJson(tagCompound.getString("owner_name"), RegistryAccess.EMPTY)) : Optional.empty()
-        );
     }
 
     public Frequency withLeft(@Nullable EnumColour left) {
@@ -111,32 +94,11 @@ public record Frequency(
         return new EnumColour[] { left, middle, right };
     }
 
-    private CompoundTag write_internal(CompoundTag tagCompound) {
-        tagCompound.putInt("left", left.getWoolMeta());
-        tagCompound.putInt("middle", middle.getWoolMeta());
-        tagCompound.putInt("right", right.getWoolMeta());
-        owner.ifPresent(uuid -> tagCompound.putUUID("owner", uuid));
-        ownerName.ifPresent(component -> tagCompound.putString("owner_name", Component.Serializer.toJson(component, RegistryAccess.EMPTY)));
-        return tagCompound;
+    public static Frequency getComponentOrEmpty(ItemStack stack) {
+        return stack.getOrDefault(EnderStorageModContent.FREQUENCY_DATA_COMPONENT, Frequency.DEFAULT);
     }
 
-    @Deprecated
-    public void writeToPacket(MCDataOutput packet) {
-        packet.writeCompoundNBT(write_internal(new CompoundTag()));
-    }
-
-    @Deprecated
-    public static Frequency readFromPacket(MCDataInput packet) {
-        return new Frequency(packet.readCompoundNBT());
-    }
-
-    @Deprecated // Maybe?
-    public static Frequency readFromStack(ItemStack stack) {
-        return stack.getOrDefault(EnderStorageModContent.FREQUENCY_DATA_COMPONENT, new Frequency());
-    }
-
-    @Deprecated // Maybe?
-    public ItemStack writeToStack(ItemStack stack) {
+    public ItemStack putComponent(ItemStack stack) {
         stack.set(EnderStorageModContent.FREQUENCY_DATA_COMPONENT, this);
         return stack;
     }

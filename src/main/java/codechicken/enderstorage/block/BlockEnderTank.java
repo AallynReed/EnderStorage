@@ -10,10 +10,7 @@ import codechicken.lib.vec.*;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -25,7 +22,7 @@ import static codechicken.lib.vec.Vector3.CENTER;
 /**
  * Created by covers1624 on 29/10/19.
  */
-public class BlockEnderTank extends BlockEnderStorage {
+public class BlockEnderTank extends BlockEnderStorage<TileEnderTank> {
 
     private static final IndexedVoxelShape TANK = new IndexedVoxelShape(Shapes.create(0.15, 0, 0.15, 0.85, 0.916, 0.85), 0);
     private static final IndexedVoxelShape[][] BUTTONS = new IndexedVoxelShape[4][3];
@@ -59,28 +56,17 @@ public class BlockEnderTank extends BlockEnderStorage {
     }
 
     public BlockEnderTank(Properties properties) {
-        super(properties);
+        super(properties, EnderStorageModContent.ENDER_TANK_TILE::get);
     }
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter worldIn, BlockPos pos, CollisionContext context) {
-        VoxelShape shape = TANK;
-        BlockEntity t = worldIn.getBlockEntity(pos);
-        if (t instanceof TileEnderTank tile) {
-            shape = SHAPES[tile.rotation];
-        }
-        return shape;
+        return SHAPES[rotation.get(state).get2DDataValue()];
     }
 
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileEnderTank(pos, state);
-    }
-
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level p_153212_, BlockState p_153213_, BlockEntityType<T> p_153214_) {
-        return createTickerHelper(p_153214_, EnderStorageModContent.ENDER_TANK_TILE.get(), (level, pos, state, tile) -> tile.tick());
     }
 }

@@ -6,19 +6,18 @@ import codechicken.enderstorage.api.StorageType;
 import codechicken.enderstorage.config.EnderStorageConfig;
 import codechicken.enderstorage.container.ContainerEnderItemStorage;
 import codechicken.enderstorage.manager.EnderStorageManager;
-import codechicken.enderstorage.network.EnderStorageSPH;
-import codechicken.lib.data.MCDataInput;
+import codechicken.enderstorage.network.EnderStorageNetwork;
 import codechicken.lib.inventory.InventoryUtils;
-import codechicken.lib.inventory.container.CCLMenuType;
 import codechicken.lib.util.ArrayUtils;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 public class EnderItemStorage extends AbstractEnderStorage implements Container {
 
@@ -37,21 +36,23 @@ public class EnderItemStorage extends AbstractEnderStorage implements Container 
     }
 
     @Override
-    public void clearStorage() {
-        synchronized (this) {
-            empty();
-            setDirty();
+    public void loadFromTag(ValueInput input) {
+        size = input.getIntOr("size", 0);
+        empty();
+        InventoryUtils.readItemStacksFromInput(input, items);
+        if (size != EnderStorageConfig.storageSize) {
+            alignSize();
         }
     }
 
     @Override
-    public void loadFromTag(CompoundTag tag, HolderLookup.Provider registries) {
-        size = tag.getByte("size");
-        empty();
-        InventoryUtils.readItemStacksFromTag(registries, items, tag.getList("Items", 10));
-        if (size != EnderStorageConfig.storageSize) {
+    public void saveToTag(ValueOutput output) {
+        if (size != EnderStorageConfig.storageSize && open == 0) {
             alignSize();
         }
+        output.putByte("size", (byte) size);
+
+        InventoryUtils.writeItemStacksToOutput(output, items);
     }
 
     private void alignSize() {
@@ -90,19 +91,6 @@ public class EnderItemStorage extends AbstractEnderStorage implements Container 
         return "item";
     }
 
-    @Override
-    public CompoundTag saveToTag(HolderLookup.Provider registries) {
-        if (size != EnderStorageConfig.storageSize && open == 0) {
-            alignSize();
-        }
-
-        CompoundTag compound = new CompoundTag();
-        compound.put("Items", InventoryUtils.writeItemStacksToTag(registries, items));
-        compound.putByte("size", (byte) size);
-
-        return compound;
-    }
-
     public ItemStack getItem(int slot) {
         synchronized (this) {
             return items[slot];
@@ -130,7 +118,7 @@ public class EnderItemStorage extends AbstractEnderStorage implements Container 
         synchronized (this) {
             open++;
             if (open == 1) {
-                EnderStorageSPH.sendOpenUpdateTo(null, freq, true);
+                EnderStorageNetwork.sendOpenUpdateTo(null, freq, true);
             }
         }
     }
@@ -143,7 +131,7 @@ public class EnderItemStorage extends AbstractEnderStorage implements Container 
         synchronized (this) {
             open--;
             if (open == 0) {
-                EnderStorageSPH.sendOpenUpdateTo(null, freq, false);
+                EnderStorageNetwork.sendOpenUpdateTo(null, freq, false);
             }
         }
     }
@@ -189,14 +177,14 @@ public class EnderItemStorage extends AbstractEnderStorage implements Container 
     }
 
     public void openContainer(ServerPlayer player, Component title) {
-        CCLMenuType.openMenu(player, new SimpleMenuProvider((id, inv, p) -> new ContainerEnderItemStorage(id, inv, EnderItemStorage.this), title),
+        player.openMenu(new SimpleMenuProvider((id, inv, p) -> new ContainerEnderItemStorage(id, inv, EnderItemStorage.this), title),
                 packet -> {
-                    freq.writeToPacket(packet);
+                    packet.cc$writeWithRegistryCodec(Frequency.STREAM_CODEC, freq);
                     packet.writeByte(size);
                 });
     }
 
-    public void handleContainerPacket(MCDataInput packet) {
+    public void handleContainerPacket(RegistryFriendlyByteBuf packet) {
         size = packet.readByte();
         empty();
     }
@@ -218,14 +206,6 @@ public class EnderItemStorage extends AbstractEnderStorage implements Container 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
         return true;
-    }
-
-    @Override
-    public void startOpen(Player player) {
-    }
-
-    @Override
-    public void stopOpen(Player player) {
     }
 
     @Override

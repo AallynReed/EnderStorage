@@ -4,7 +4,7 @@ import codechicken.enderstorage.api.Frequency;
 import codechicken.enderstorage.init.EnderStorageModContent;
 import codechicken.enderstorage.manager.EnderStorageManager;
 import codechicken.enderstorage.storage.EnderItemStorage;
-import codechicken.lib.data.MCDataInput;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -16,8 +16,8 @@ public class ContainerEnderItemStorage extends AbstractContainerMenu {
 
     public EnderItemStorage chestInv;
 
-    public ContainerEnderItemStorage(int windowId, Inventory playerInv, MCDataInput packet) {
-        this(windowId, playerInv, EnderStorageManager.instance(true).getStorage(Frequency.readFromPacket(packet), EnderItemStorage.TYPE));
+    public ContainerEnderItemStorage(int windowId, Inventory playerInv, RegistryFriendlyByteBuf packet) {
+        this(windowId, playerInv, EnderStorageManager.instance(true).getStorage(packet.cc$readWithRegistryCodec(Frequency.STREAM_CODEC), EnderItemStorage.TYPE));
         chestInv.handleContainerPacket(packet);
     }
 

@@ -2,55 +2,62 @@ package codechicken.enderstorage.client.render.item;
 
 import codechicken.enderstorage.api.Frequency;
 import codechicken.enderstorage.client.render.tile.RenderTileEnderTank;
-import codechicken.enderstorage.network.TankSynchroniser;
+import codechicken.enderstorage.client.render.tile.RenderTileEnderTank.RenderState;
+import codechicken.enderstorage.manager.ClientTankSynchronizer;
 import codechicken.lib.math.MathHelper;
-import codechicken.lib.model.PerspectiveModelState;
-import codechicken.lib.render.CCRenderState;
-import codechicken.lib.render.item.IItemRenderer;
-import codechicken.lib.util.TransformUtils;
-import codechicken.lib.vec.Matrix4;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+
+import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Created by covers1624 on 4/27/2016.
  */
-public class EnderTankItemRender implements IItemRenderer {
+public class EnderTankItemRender implements SpecialModelRenderer<RenderState> {
 
     @Override
-    public void renderItem(ItemStack stack, ItemDisplayContext context, PoseStack poseStack, MultiBufferSource source, int packedLight, int packedOverlay) {
-        CCRenderState ccrs = CCRenderState.instance();
-        ccrs.reset();
-        ccrs.brightness = packedLight;
-        ccrs.overlay = packedOverlay;
-        Frequency freq = Frequency.readFromStack(stack);
-        FluidStack fluid = TankSynchroniser.getClientLiquid(freq);
-        Matrix4 mat = new Matrix4(poseStack);
-        RenderTileEnderTank.renderTank(ccrs, mat, source, 2, (float) (MathHelper.torad * 90F), freq, 0);
-        mat.translate(-0.5, 0, -0.5);
-        RenderTileEnderTank.renderFluid(ccrs, mat, source, fluid);
+    public RenderState extractArgument(ItemStack stack) {
+        RenderState state = new RenderState();
+        state.valveRotation = (float) (MathHelper.torad * 90F);
+        state.frequency = Frequency.getComponentOrEmpty(stack);
+        state.fluid = ClientTankSynchronizer.getClientLiquid(state.frequency);
+        return state;
     }
 
     @Override
-    public PerspectiveModelState getModelState() {
-        return TransformUtils.DEFAULT_BLOCK;
+    public void getExtents(Consumer<Vector3fc> output) {
+        RenderTileEnderTank.getExtents(output);
     }
 
     @Override
-    public boolean useAmbientOcclusion() {
-        return false;
+    public void submit(@Nullable RenderState state, ItemDisplayContext displayCtx, PoseStack pose, SubmitNodeCollector collector, int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+        if (state == null) return;
+
+        state.lightCoords = packedLight;
+        state.overlayCoords = packedOverlay;
+        RenderTileEnderTank.doSubmit(state, pose, collector, null);
     }
 
-    @Override
-    public boolean isGui3d() {
-        return false;
-    }
+    public record Unbaked() implements SpecialModelRenderer.Unbaked {
 
-    @Override
-    public boolean usesBlockLight() {
-        return false;
+        public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(Unbaked::new);
+
+        @Override
+        public MapCodec<? extends SpecialModelRenderer.Unbaked> type() {
+            return MAP_CODEC;
+        }
+
+        @Override
+        public SpecialModelRenderer<?> bake(BakingContext context) {
+            return new EnderTankItemRender();
+        }
     }
 }

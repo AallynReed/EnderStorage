@@ -3,28 +3,29 @@ package codechicken.enderstorage.tile;
 import codechicken.enderstorage.api.AbstractEnderStorage;
 import codechicken.enderstorage.api.Frequency;
 import codechicken.enderstorage.network.EnderStorageNetwork;
-import codechicken.lib.data.MCDataInput;
-import codechicken.lib.data.MCDataOutput;
-import codechicken.lib.packet.PacketCustom;
+import codechicken.lib.block.ModularBlockEntity;
+import codechicken.lib.block.component.tile.ValueComponent;
+import codechicken.lib.packet.StreamPacket;
 import codechicken.lib.vec.Cuboid6;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class TileFrequencyOwner extends BlockEntity {
+public abstract class TileFrequencyOwner extends ModularBlockEntity {
 
     public static final Cuboid6 SELECTION_BUTTON = new Cuboid6(-1 / 16D, 0, -2 / 16D, 1 / 16D, 1 / 16D, 2 / 16D);
 
-    protected Frequency frequency = new Frequency();
+    protected Frequency frequency = Frequency.DEFAULT;
     private int changeCount;
 
     public TileFrequencyOwner(BlockEntityType<?> tileEntityTypeIn, BlockPos pos, BlockState state) {
@@ -42,7 +43,7 @@ public abstract class TileFrequencyOwner extends BlockEntity {
         setChanged();
         BlockState state = level.getBlockState(worldPosition);
         level.sendBlockUpdated(worldPosition, state, state, 3);
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             sendUpdatePacket();
         }
     }
@@ -61,21 +62,15 @@ public abstract class TileFrequencyOwner extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        frequency = Frequency.CODEC
-                .parse(registries.createSerializationContext(NbtOps.INSTANCE), tag.get("Frequency"))
-                .getOrThrow();
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        frequency = input.read("Frequency", Frequency.CODEC).orElse(Frequency.DEFAULT);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-
-        tag.put("Frequency", Frequency.CODEC
-                .encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), frequency)
-                .getOrThrow()
-        );
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.store("Frequency", Frequency.CODEC, frequency);
     }
 
     @Override
@@ -96,19 +91,19 @@ public abstract class TileFrequencyOwner extends BlockEntity {
         createPacket().sendToChunk(this);
     }
 
-    public PacketCustom createPacket() {
-        PacketCustom packet = new PacketCustom(EnderStorageNetwork.NET_CHANNEL, EnderStorageNetwork.C_TILE_UPDATE, level.registryAccess());
-        packet.writePos(getBlockPos());
+    public StreamPacket.ToClient createPacket() {
+        var packet = EnderStorageNetwork.TILE_UPDATE.toClient(this);
+        packet.writeBlockPos(getBlockPos());
         writeToPacket(packet);
         return packet;
     }
 
-    public void writeToPacket(MCDataOutput packet) {
-        packet.writeWithRegistryCodec(Frequency.STREAM_CODEC, frequency);
+    public void writeToPacket(RegistryFriendlyByteBuf packet) {
+        packet.cc$writeWithRegistryCodec(Frequency.STREAM_CODEC, frequency);
     }
 
-    public void readFromPacket(MCDataInput packet) {
-        frequency = packet.readWithRegistryCodec(Frequency.STREAM_CODEC);
+    public void readFromPacket(RegistryFriendlyByteBuf packet) {
+        frequency = packet.cc$readWithRegistryCodec(Frequency.STREAM_CODEC);
         onFrequencySet();
     }
 
@@ -118,8 +113,8 @@ public abstract class TileFrequencyOwner extends BlockEntity {
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        loadWithComponents(tag, registries);
+    public void handleUpdateTag(ValueInput input) {
+        loadWithComponents(input);
     }
 
     public int getLightValue() {
@@ -132,9 +127,5 @@ public abstract class TileFrequencyOwner extends BlockEntity {
 
     public int comparatorOutput() {
         return 0;
-    }
-
-    public boolean rotate() {
-        return false;
     }
 }

@@ -10,6 +10,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -17,6 +20,8 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -52,6 +57,8 @@ public class EnderStorageManager {
             instance(false).sendClientInfo((ServerPlayer) event.getEntity());
         }
     }
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EnderStorageManager.class);
 
     private static @Nullable EnderStorageManager serverManager;
     private static @Nullable EnderStorageManager clientManager;
@@ -134,8 +141,12 @@ public class EnderStorageManager {
     private void save(boolean force) {
         if (!dirtyStorage.isEmpty() || force) {
             for (AbstractEnderStorage inv : dirtyStorage) {
-                saveTag.put(inv.freq + ",type=" + inv.type(), inv.saveToTag(ServerLifecycleHooks.getCurrentServer().registryAccess()));
-                inv.setClean();
+                try (var reporter = new ProblemReporter.ScopedCollector(LOGGER)) {
+                    var output = TagValueOutput.createWithContext(reporter, ServerLifecycleHooks.getCurrentServer().registryAccess());
+                    inv.saveToTag(output);
+                    saveTag.put(inv.freq + ",type=" + inv.type(), output.buildResult());
+                    inv.setClean();
+                }
             }
 
             dirtyStorage.clear();
@@ -187,7 +198,15 @@ public class EnderStorageManager {
         if (storage == null) {
             storage = plugins.get(type).createEnderStorage(this, freq);
             if (!client && saveTag.contains(key)) {
-                storage.loadFromTag(saveTag.getCompound(key), ServerLifecycleHooks.getCurrentServer().registryAccess());
+                try (var reporter = new ProblemReporter.ScopedCollector(LOGGER)) {
+                    storage.loadFromTag(
+                            TagValueInput.create(
+                                    reporter,
+                                    ServerLifecycleHooks.getCurrentServer().registryAccess(),
+                                    saveTag.getCompoundOrEmpty(key)
+                            )
+                    );
+                }
             }
             storageMap.put(key, storage);
             storageList.get(type).add(storage);
@@ -216,7 +235,7 @@ public class EnderStorageManager {
 
     public List<String> getValidKeys(String identifer) {
         List<String> list = new ArrayList<>();
-        for (String key : saveTag.getAllKeys()) {
+        for (String key : saveTag.keySet()) {
             if (key.endsWith(",type=" + identifer)) {
                 list.add(key.replace(",type=" + identifer, ""));
             }
