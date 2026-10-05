@@ -2,6 +2,7 @@ package codechicken.enderstorage.client.render;
 
 import codechicken.lib.math.MathHelper;
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
@@ -36,10 +37,10 @@ public class RenderCustomEndPortal {
             .withVertexShader("core/position_tex_color")
             .withFragmentShader("core/position_tex_color")
             .withSampler("Sampler0")
-            .withBlend(new BlendFunction(
+            .withColorTargetState(new ColorTargetState(new BlendFunction(
                     SourceFactor.SRC_ALPHA,
                     DestFactor.ONE_MINUS_SRC_ALPHA
-            ))
+            )))
             .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
             .build();
 
@@ -48,10 +49,10 @@ public class RenderCustomEndPortal {
             .withVertexShader("core/position_tex_color")
             .withFragmentShader("core/position_tex_color")
             .withSampler("Sampler0")
-            .withBlend(new BlendFunction(
+            .withColorTargetState(new ColorTargetState(new BlendFunction(
                     SourceFactor.ONE,
                     DestFactor.ONE
-            ))
+            )))
             .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
             .build();
 
