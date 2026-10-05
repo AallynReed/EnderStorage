@@ -11,31 +11,21 @@ import net.minecraft.world.entity.player.Inventory;
 public class GuiEnderItemStorage extends AbstractContainerScreen<ContainerEnderItemStorage> {
 
     public GuiEnderItemStorage(ContainerEnderItemStorage container, Inventory playerInv, Component title) {
-        super(container, playerInv, title);
-
-        if (container.chestInv.getSize() == 2) {
-            imageHeight = 222;
-        }
+        super(container, playerInv, title, 176, container.chestInv.getSize() == 2 ? 222 : 166);
     }
 
     @Override
-    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
-        renderBackground(graphics, mouseX, mouseY, partialTicks);
-        super.render(graphics, mouseX, mouseY, partialTicks);
-        renderTooltip(graphics, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title.getVisualOrderText(), 8, 6, 0xFF404040, false);
-        graphics.drawString(font, playerInventoryTitle.getVisualOrderText(), 8, imageHeight - 94, 0xFF404040, false);
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        graphics.text(font, title.getVisualOrderText(), 8, 6, 0xFF404040, false);
+        graphics.text(font, playerInventoryTitle.getVisualOrderText(), 8, imageHeight - 94, 0xFF404040, false);
         menu.chestInv.freq.ownerName().ifPresent(name -> {
-            graphics.drawString(font, name.getVisualOrderText(), 170 - font.width(name), 6, 0xFF404040, false);
+            graphics.text(font, name.getVisualOrderText(), 170 - font.width(name), 6, 0xFF404040, false);
         });
     }
 
     @Override
-    protected void renderBg(GuiGraphicsExtractor graphics, float partialTicks, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTicks);
         Identifier texture = Identifier.withDefaultNamespace(menu.chestInv.getSize() == 0 ? "textures/gui/container/dispenser.png" : "textures/gui/container/generic_54.png");
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
