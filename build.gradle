@@ -45,7 +45,7 @@ neoForge {
             server()
         }
         data {
-            data()
+            clientData()
             programArguments.addAll '--mod', 'enderstorage', '--all', '--output', file("src/main/generated").absolutePath, '--existing', file("src/main/resources").absolutePath
         }
     }
