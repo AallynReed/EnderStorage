@@ -25,7 +25,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Blocks;
@@ -192,9 +192,9 @@ public class DataGenerators {
                     .patternLine("OCO")
                     .patternLine("BPB");
 
-            special(Identifier.fromNamespaceAndPath(MOD_ID, "recolour_ender_pouch"), () -> new ReColourRecipe(new ItemStack(ENDER_POUCH.get())));
-            special(Identifier.fromNamespaceAndPath(MOD_ID, "recolour_ender_chest"), () -> new ReColourRecipe(new ItemStack(ENDER_CHEST_ITEM.get())));
-            special(Identifier.fromNamespaceAndPath(MOD_ID, "recolour_ender_tank"), () -> new ReColourRecipe(new ItemStack(ENDER_TANK_ITEM.get())));
+            special(Identifier.fromNamespaceAndPath(MOD_ID, "recolour_ender_pouch"), () -> new ReColourRecipe(new ItemStackTemplate(ENDER_POUCH.get())));
+            special(Identifier.fromNamespaceAndPath(MOD_ID, "recolour_ender_chest"), () -> new ReColourRecipe(new ItemStackTemplate(ENDER_CHEST_ITEM.get())));
+            special(Identifier.fromNamespaceAndPath(MOD_ID, "recolour_ender_tank"), () -> new ReColourRecipe(new ItemStackTemplate(ENDER_TANK_ITEM.get())));
         }
     }
 }
