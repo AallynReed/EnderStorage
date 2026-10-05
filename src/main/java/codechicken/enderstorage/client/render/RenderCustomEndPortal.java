@@ -3,6 +3,7 @@ package codechicken.enderstorage.client.render;
 import codechicken.lib.math.MathHelper;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
@@ -41,6 +42,7 @@ public class RenderCustomEndPortal {
                     SourceFactor.SRC_ALPHA,
                     DestFactor.ONE_MINUS_SRC_ALPHA
             )))
+            .withDepthStencilState(DepthStencilState.DEFAULT)
             .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
             .build();
 
@@ -53,6 +55,7 @@ public class RenderCustomEndPortal {
                     SourceFactor.ONE,
                     DestFactor.ONE
             )))
+            .withDepthStencilState(DepthStencilState.DEFAULT)
             .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)
             .build();
 
