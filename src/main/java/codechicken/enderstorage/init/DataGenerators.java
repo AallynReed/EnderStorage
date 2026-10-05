@@ -20,6 +20,7 @@ import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.Identifier;
@@ -137,7 +138,7 @@ public class DataGenerators {
         }
 
         private Identifier customFlat(ItemModelGenerators itemModels, String path, String texture) {
-            return ModelTemplates.FLAT_ITEM.create(modLocation(path), TextureMapping.layer0(modLocation(texture)), itemModels.modelOutput);
+            return ModelTemplates.FLAT_ITEM.create(modLocation(path), TextureMapping.layer0(new Material(modLocation(texture))), itemModels.modelOutput);
         }
     }
 
