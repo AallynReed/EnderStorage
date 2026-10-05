@@ -163,7 +163,7 @@ public class DataGenerators {
 
         @Override
         protected void registerRecipes() {
-            customShaped(ENDER_POUCH, (group, category, pattern, stack, showNotification) -> new CreateRecipe(group, pattern, stack))
+            customShaped(ENDER_POUCH, (commonInfo, bookInfo, pattern, result) -> new CreateRecipe(bookInfo.group(), pattern, result))
                     .key('P', Tags.Items.ENDER_PEARLS)
                     .key('L', Tags.Items.LEATHERS)
                     .key('B', Items.BLAZE_POWDER)
@@ -172,7 +172,7 @@ public class DataGenerators {
                     .patternLine("LPL")
                     .patternLine("BWB");
 
-            customShaped((ItemLike) ENDER_CHEST_ITEM, (group, category, pattern, stack, showNotification) -> new CreateRecipe(group, pattern, stack))
+            customShaped((ItemLike) ENDER_CHEST_ITEM, (commonInfo, bookInfo, pattern, result) -> new CreateRecipe(bookInfo.group(), pattern, result))
                     .key('P', Tags.Items.ENDER_PEARLS)
                     .key('O', Tags.Items.OBSIDIANS)
                     .key('C', Tags.Items.CHESTS_WOODEN)
@@ -181,7 +181,7 @@ public class DataGenerators {
                     .patternLine("BWB")
                     .patternLine("OCO")
                     .patternLine("BPB");
-            customShaped((ItemLike) ENDER_TANK_ITEM, (group, category, pattern, stack, showNotification) -> new CreateRecipe(group, pattern, stack))
+            customShaped((ItemLike) ENDER_TANK_ITEM, (commonInfo, bookInfo, pattern, result) -> new CreateRecipe(bookInfo.group(), pattern, result))
                     .key('P', Tags.Items.ENDER_PEARLS)
                     .key('O', Tags.Items.OBSIDIANS)
                     .key('C', Items.CAULDRON)

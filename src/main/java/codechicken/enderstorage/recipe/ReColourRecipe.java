@@ -7,7 +7,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.covers1624.quack.collection.ColUtils;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -66,7 +65,7 @@ public class ReColourRecipe implements CraftingRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingInput inv, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingInput inv) {
         ItemWithPos chestPos = findChest(inv);
         if (chestPos == null) return result.copy(); // This should not happen...
 
@@ -80,6 +79,11 @@ public class ReColourRecipe implements CraftingRecipe {
 
     @Override
     public boolean isSpecial() {
+        return true;
+    }
+
+    @Override
+    public boolean showNotification() {
         return true;
     }
 
@@ -148,11 +152,11 @@ public class ReColourRecipe implements CraftingRecipe {
 
     private record ItemWithPos(int x, int y, ItemStack stack) { }
 
-    public static class Serializer implements RecipeSerializer<ReColourRecipe> {
+    public static class Serializer {
 
         private static final MapCodec<ReColourRecipe> CODEC = RecordCodecBuilder.mapCodec(builder -> builder.group(
                         Codec.STRING.optionalFieldOf("group", "").forGetter(e -> e.group),
-                        ItemStack.STRICT_CODEC.fieldOf("result").forGetter(e -> e.result)
+                        ItemStack.CODEC.fieldOf("result").forGetter(e -> e.result)
                 ).apply(builder, ReColourRecipe::new)
         );
 
@@ -162,14 +166,6 @@ public class ReColourRecipe implements CraftingRecipe {
                 ReColourRecipe::new
         );
 
-        @Override
-        public MapCodec<ReColourRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, ReColourRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
+        public static final RecipeSerializer<ReColourRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);
     }
 }

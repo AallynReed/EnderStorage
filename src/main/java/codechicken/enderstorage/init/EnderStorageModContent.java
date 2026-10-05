@@ -91,10 +91,10 @@ public class EnderStorageModContent {
     );
 
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<CreateRecipe>> CREATE_RECIPE_SERIALIZER = RECIPE_SERIALIZERS.register("create_recipe",
-            CreateRecipe.Serializer::new
+            () -> CreateRecipe.Serializer.INSTANCE
     );
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ReColourRecipe>> RECOLOUR_RECIPE_SERIALIZER = RECIPE_SERIALIZERS.register("recolour_recipe",
-            ReColourRecipe.Serializer::new
+            () -> ReColourRecipe.Serializer.INSTANCE
     );
 
     public static void init(IEventBus modBus) {
